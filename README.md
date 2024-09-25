@@ -3,7 +3,7 @@
 Summary:
 This project aims to create a fully function SOS game in Java accompanied by a GUI. There will be two game modes: simple and general. A "simple" game will end as soon as a user creates an SOS. A "general" game will end only once the board is full or no new SOSs can possibly be created. At the end of a general game, the number of SOSs formed by each player is tallied and the winner is the player with the most SOSs. There will be a two-player "human versus human" option as well as a single-player "human versus machine" mode where a player may play against the computer on varying difficulties. Players will also be given the option to select a board size within certain bounds. The program is replayable and players may select to play a new game once they have completed their prior game.
 
-
+|Design Choices| |
 | Object-oriented programming language | Java |
 |--------------------------------------|------|
 | GUI library (strongly encouraged)    | JavaFX (Subject to change if I decide it does not meet my needs) |
