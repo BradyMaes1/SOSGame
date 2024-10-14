@@ -12,3 +12,6 @@ This project aims to create a fully function SOS game in Java accompanied by a G
 | Programming style guide (must read it carefully) | Google Java Style Guide (I am a big fan of Camel and Pascal casing as well as limiting characters on each line). <br> *Also worth noting that IntelliJ, like many IDEs, has the option to be configured to a specific style guide. This can be done for my project with the Google Java Format Plugin.* |
 | Project hosting site | GitHub (github.com) |
 | Other decisions if applicable | I make some other decisions found in my brainstorming section below. |
+
+# Sprint 2 Demo Link:
+https://youtu.be/0Cz57L1ESTM
