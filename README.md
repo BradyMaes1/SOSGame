@@ -13,5 +13,7 @@ This project aims to create a fully function SOS game in Java accompanied by a G
 | Project hosting site | GitHub (github.com) |
 | Other decisions if applicable | I make some other decisions found in my brainstorming section below. |
 
-# Sprint 2 Demo Link:
-https://youtu.be/0Cz57L1ESTM
+# Sprint 2
+In this sprint, we set up the core logic and UI for the game. A user can select between a "simple" or "general" game, but this is purely cosmetic at this point. The user can select their board size and to start the game. Once they click "start game", the board will update according to the size they selected. A user can choose between placing an "S" or "O" and their moves will be reflected on the board in their color (red or blue). No win conditions are implemented in this sprint.
+
+Demo Link: https://youtu.be/0Cz57L1ESTM
