@@ -14,174 +14,233 @@ import javafx.stage.Stage;
  * The JavaFX GUI for the SOS game, allowing for board size selection,
  * game mode selection, move placement, and turn tracking.
  */
-public class SOSGameUI extends Application {
+public class SOSGameUI extends Application implements GameEndListener {
 
     private SOSGame game;
-    private GridPane grid; // The game board grid
-    private Label turnLabel; // Label to indicate the current player's turn
+    private GridPane grid;
+    private Label turnLabel;
     private ComboBox<Integer> boardSizeComboBox;
     private RadioButton simpleGameButton;
     private RadioButton generalGameButton;
     private ToggleGroup gameModeGroup;
-    private Label gameModeLabel; // Class-level game mode display label
-    private RadioButton sButton; // Radio button for selecting "S"
-    private RadioButton oButton; // Radio button for selecting "O"
-    private ToggleGroup moveGroup; // Toggle group for "S" and "O" selection
+    private Label gameModeLabel;
+    private RadioButton sButton;
+    private RadioButton oButton;
+    private ToggleGroup moveGroup;
+    private boolean gameEnded = false;
+    private Label playerOneScoreLabel;
+    private Label playerTwoScoreLabel;
 
+    /**
+     * Sets up and displays the main GUI window.
+     *
+     * @param primaryStage the primary stage for this application
+     */
     @Override
     public void start(Stage primaryStage) {
-        VBox root = new VBox(20); // Increase spacing to 20 for a cleaner layout
-        root.setPadding(new Insets(20)); // Add padding around the edges
-        root.setAlignment(Pos.TOP_CENTER); // Align at the top and center horizontally
+        VBox root = new VBox(20);
+        root.setPadding(new Insets(20));
+        root.setAlignment(Pos.TOP_CENTER);
 
-        // Title Label
         Label titleLabel = new Label("Brady's SOS Game");
         titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-        // Board size selection
         Label boardSizeLabel = new Label("Select Board Size:");
         boardSizeComboBox = new ComboBox<>();
         for (int i = 3; i <= 9; i++) {
-            boardSizeComboBox.getItems().add(i); // Add sizes 3 to 9
+            boardSizeComboBox.getItems().add(i);
         }
-        boardSizeComboBox.setValue(3); // Default to 3x3 board size
+        boardSizeComboBox.setValue(3);
 
-        // Game mode selection (Simple or General)
         Label modeLabel = new Label("Select Game Mode:");
         simpleGameButton = new RadioButton("Simple");
         generalGameButton = new RadioButton("General");
         gameModeGroup = new ToggleGroup();
         simpleGameButton.setToggleGroup(gameModeGroup);
         generalGameButton.setToggleGroup(gameModeGroup);
-        simpleGameButton.setSelected(true); // Default to "Simple" game
+        simpleGameButton.setSelected(true);
 
-        // Layout for game mode selection
         HBox gameModeSelection = new HBox(10, modeLabel, simpleGameButton, generalGameButton);
-        gameModeSelection.setAlignment(Pos.CENTER); // Center the game mode selection layout
+        gameModeSelection.setAlignment(Pos.CENTER);
 
-        // Button to start the game
         Button startGameButton = new Button("Start Game");
-        startGameButton.setOnAction(e -> startNewGame(primaryStage)); // Pass primaryStage to adjust size
+        startGameButton.setOnAction(e -> startNewGame(primaryStage));
 
-        // Turn indicator label
         turnLabel = new Label("Player 1's Turn");
-        turnLabel.setStyle("-fx-text-fill: red;"); // Set Player 1's turn to red
+        turnLabel.setStyle("-fx-text-fill: red;");
 
-        // Move selection for "S" or "O"
         Label moveSelectionLabel = new Label("Select Your Move:");
         sButton = new RadioButton("S");
         oButton = new RadioButton("O");
         moveGroup = new ToggleGroup();
-        sButton.setToggleGroup(moveGroup); // Only one S or O radio button is allowed to be on at a time
+        sButton.setToggleGroup(moveGroup);
         oButton.setToggleGroup(moveGroup);
-        sButton.setSelected(true); // Default to selecting "S"
+        sButton.setSelected(true);
 
-        // Layout for move selection
         HBox moveSelectionLayout = new HBox(10, moveSelectionLabel, sButton, oButton);
-        moveSelectionLayout.setAlignment(Pos.CENTER); // Center the move selection layout
+        moveSelectionLayout.setAlignment(Pos.CENTER);
 
-        // Game Mode display label
         gameModeLabel = new Label("Game Mode: Simple");
 
-        // Layout for board size selection, move selection, and game mode
+        playerOneScoreLabel = new Label("Player 1: 0");
+        playerOneScoreLabel.setStyle("-fx-text-fill: red; -fx-font-size: 16px;");
+        playerTwoScoreLabel = new Label("Player 2: 0");
+        playerTwoScoreLabel.setStyle("-fx-text-fill: blue; -fx-font-size: 16px;");
+
+        HBox scoreDisplayLayout = new HBox(20, playerOneScoreLabel, playerTwoScoreLabel);
+        scoreDisplayLayout.setAlignment(Pos.CENTER);
+
         HBox sizeSelectionLayout = new HBox(10, boardSizeLabel, boardSizeComboBox, startGameButton);
-        sizeSelectionLayout.setAlignment(Pos.CENTER); // Center the board size selection layout
+        sizeSelectionLayout.setAlignment(Pos.CENTER);
 
-        root.getChildren().addAll(titleLabel, sizeSelectionLayout, gameModeSelection, moveSelectionLayout, turnLabel, gameModeLabel);
+        root.getChildren().addAll(titleLabel, sizeSelectionLayout, gameModeSelection, moveSelectionLayout, turnLabel, gameModeLabel, scoreDisplayLayout);
 
-        Scene scene = new Scene(root, 500, 400); // Set the window to a rectangular shape (500x400)
+        Scene scene = new Scene(root, 500, 450);
         primaryStage.setScene(scene);
         primaryStage.setTitle("SOS Game");
         primaryStage.show();
     }
 
     /**
-     * Starts a new game with the selected board size and initializes the game board.
+     * Displays the winner message when the game ends.
+     *
+     * @param message the game-ending message to be displayed
+     */
+    @Override
+    public void onGameEnd(String message) {
+        displayWinner(message);
+    }
+
+    /**
+     * Updates the score display for each player.
+     *
+     * @param playerOneScore the current score of Player 1
+     * @param playerTwoScore the current score of Player 2
+     */
+    @Override
+    public void onScoreUpdate(int playerOneScore, int playerTwoScore) {
+        playerOneScoreLabel.setText("Player 1: " + playerOneScore);
+        playerTwoScoreLabel.setText("Player 2: " + playerTwoScore);
+    }
+
+    /**
+     * Displays the final message and disables the board buttons when the game ends.
+     *
+     * @param message the final game message (e.g., winner or draw message)
+     */
+    private void displayWinner(String message) {
+        turnLabel.setText(message);
+        turnLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+        for (int row = 0; row < game.getBoard().length; row++) {
+            for (int col = 0; col < game.getBoard()[row].length; col++) {
+                Button cellButton = (Button) grid.getChildren().get(row * game.getBoard().length + col);
+                cellButton.setDisable(true);
+            }
+        }
+        gameEnded = true;
+    }
+
+    /**
+     * Initializes a new game based on the selected board size and game mode.
+     *
+     * @param stage the stage for displaying the board
      */
     private void startNewGame(Stage stage) {
         int boardSize = boardSizeComboBox.getValue();
-        game = new SOSGame(boardSize); // Create a new game with the selected board size
 
-        if (grid != null) {
-            grid.getChildren().clear(); // Clear the grid if already present (for new game)
+        if (simpleGameButton.isSelected()) {
+            game = new SimpleGame(boardSize, this);
+            gameModeLabel.setText("Game Mode: Simple");
+            playerOneScoreLabel.setVisible(false);
+            playerTwoScoreLabel.setVisible(false);
         } else {
-            grid = new GridPane();
-            ((VBox) turnLabel.getParent()).getChildren().add(grid); // Add the grid to the layout
+            game = new GeneralGame(boardSize, this);
+            gameModeLabel.setText("Game Mode: General");
+            playerOneScoreLabel.setVisible(true);
+            playerTwoScoreLabel.setVisible(true);
+            onScoreUpdate(0, 0); // Initialize score display at 0
         }
 
-        // Ensure grid is centered and add padding so it doesn't touch the window edges
+        gameEnded = false;
+
+        if (grid != null) {
+            grid.getChildren().clear();
+        } else {
+            grid = new GridPane();
+            ((VBox) turnLabel.getParent()).getChildren().add(grid);
+        }
+
         grid.setAlignment(Pos.CENTER);
-        grid.setPadding(new Insets(10)); // Add 10px padding around the grid
+        grid.setPadding(new Insets(10));
 
-        // Set cell size
-        double cellSize = 50; // Each button/cell is 50x50
+        double cellSize = 50;
 
-        // Create buttons for each cell in the game board
         for (int row = 0; row < boardSize; row++) {
             for (int col = 0; col < boardSize; col++) {
                 Button cellButton = new Button("");
                 cellButton.setMinSize(cellSize, cellSize);
                 final int r = row;
                 final int c = col;
-                // Set the action for each button to place S or O
                 cellButton.setOnAction(e -> handleMove(r, c, cellButton));
-                grid.add(cellButton, col, row); // Add button to the grid at position (row, col)
+                grid.add(cellButton, col, row);
             }
         }
 
-        // Adjust window size to fit larger boards
-        double requiredWidth = Math.max(500, boardSize * cellSize + 100); // Add 100px for padding and controls
-        double requiredHeight = Math.max(400, boardSize * cellSize + 350); // Add 300px for labels, controls, and padding
+        double requiredWidth = Math.max(500, boardSize * cellSize + 100);
+        double requiredHeight = Math.max(450, boardSize * cellSize + 450);
 
-        // Set the stage's width and height to accommodate the new board size
         stage.setWidth(requiredWidth);
         stage.setHeight(requiredHeight);
 
-        turnLabel.setText("Player 1's Turn"); // Reset turn indicator
-        turnLabel.setStyle("-fx-text-fill: red;"); // Set Player 1's turn to red
-        // Display the selected game mode
-        String gameMode = simpleGameButton.isSelected() ? "Simple" : "General";
-        gameModeLabel.setText("Game Mode: " + gameMode);
+        turnLabel.setText("Player 1's Turn");
+        turnLabel.setStyle("-fx-text-fill: red;");
     }
 
     /**
-     * Handles the player's move on the selected cell, placing either S or O.
+     * Handles the placement of a move on the board and updates the turn label.
      *
-     * @param row The row index of the selected cell.
-     * @param col The column index of the selected cell.
-     * @param button The button corresponding to the selected cell.
+     * @param row the row where the move is placed
+     * @param col the column where the move is placed
+     * @param button the button representing the board cell
      */
     private void handleMove(int row, int col, Button button) {
-        if (!button.getText().isEmpty()) {
-            return; // Prevent placing a move on an already occupied cell
+        if (gameEnded || !button.getText().isEmpty()) {
+            return;
         }
 
-        // Determine the player's chosen move (S or O) based on the selected radio button
         char move = sButton.isSelected() ? 'S' : 'O';
 
-        // Color the mark based on the player's turn
         if (game.isPlayerOneTurn()) {
-            button.setStyle("-fx-text-fill: red; -fx-font-weight: bold;"); // Player 1's mark in red
+            button.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
         } else {
-            button.setStyle("-fx-text-fill: blue; -fx-font-weight: bold;"); // Player 2's mark in blue
+            button.setStyle("-fx-text-fill: blue; -fx-font-weight: bold;");
         }
 
         boolean moveSuccess = game.placeMove(row, col, move);
 
         if (moveSuccess) {
-            button.setText(String.valueOf(move)); // Update button with 'S' or 'O'
+            button.setText(String.valueOf(move));
 
-            // Update the turn indicator
-            if (game.isPlayerOneTurn()) {
-                turnLabel.setText("Player 1's Turn (Place S)");
-                turnLabel.setStyle("-fx-text-fill: red;"); // Player 1's turn in red
-            } else {
-                turnLabel.setText("Player 2's Turn (Place O)");
-                turnLabel.setStyle("-fx-text-fill: blue;"); // Player 2's turn in blue
+            if (!gameEnded && game.isBoardFull()) {
+                onGameEnd("The game is a draw. No SOS formed.");
+            } else if (!gameEnded) {
+                if (game.isPlayerOneTurn()) {
+                    turnLabel.setText("Player 1's Turn (Place S)");
+                    turnLabel.setStyle("-fx-text-fill: red;");
+                } else {
+                    turnLabel.setText("Player 2's Turn (Place O)");
+                    turnLabel.setStyle("-fx-text-fill: blue;");
+                }
             }
         }
     }
 
+    /**
+     * Main entry point to launch the JavaFX application.
+     *
+     * @param args the command-line arguments
+     */
     public static void main(String[] args) {
         launch(args);
     }
