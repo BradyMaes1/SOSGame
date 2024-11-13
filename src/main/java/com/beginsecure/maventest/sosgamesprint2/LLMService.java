@@ -15,7 +15,7 @@ import org.json.JSONObject;
 public class LLMService {
 
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
-    private static final String API_KEY = "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"; // Replace with your actual API key
+    private static final String API_KEY = "Insert API key here"; // For safety and commiting sake, I must leave this empty
     private static final String MODEL = "gpt-3.5-turbo"; // Specify the model to use
 
     /**
