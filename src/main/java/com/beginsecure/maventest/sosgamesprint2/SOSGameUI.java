@@ -12,7 +12,7 @@ import javafx.stage.Stage;
 
 /**
  * The JavaFX GUI for the SOS game, allowing for board size selection,
- * game mode selection, move placement, and turn tracking.
+ * game mode selection, player type selection, move placement, and turn tracking.
  */
 public class SOSGameUI extends Application implements GameEndListener {
 
@@ -30,6 +30,16 @@ public class SOSGameUI extends Application implements GameEndListener {
     private boolean gameEnded = false;
     private Label playerOneScoreLabel;
     private Label playerTwoScoreLabel;
+
+    // New elements for player type
+    private CheckBox playerOneComputerCheckBox;
+    private CheckBox playerTwoComputerCheckBox;
+
+    // Commented out computer difficulty selection
+    // private ComboBox<String> computerDifficultyComboBox;
+
+    // Integration of LLMService
+    private LLMService llmService = new LLMService();
 
     /**
      * Sets up and displays the main GUI window.
@@ -63,6 +73,19 @@ public class SOSGameUI extends Application implements GameEndListener {
         HBox gameModeSelection = new HBox(10, modeLabel, simpleGameButton, generalGameButton);
         gameModeSelection.setAlignment(Pos.CENTER);
 
+        // Player type selection checkboxes
+        playerOneComputerCheckBox = new CheckBox("Player 1: Computer");
+        playerTwoComputerCheckBox = new CheckBox("Player 2: Computer");
+
+        // Commented out computer difficulty selection
+        // Label difficultyLabel = new Label("Computer Difficulty:");
+        // computerDifficultyComboBox = new ComboBox<>();
+        // computerDifficultyComboBox.getItems().addAll("Easy", "Medium", "Hard");
+        // computerDifficultyComboBox.setValue("Medium");
+
+        HBox playerTypeSelection = new HBox(20, playerOneComputerCheckBox, playerTwoComputerCheckBox /*, difficultyLabel, computerDifficultyComboBox */);
+        playerTypeSelection.setAlignment(Pos.CENTER);
+
         Button startGameButton = new Button("Start Game");
         startGameButton.setOnAction(e -> startNewGame(primaryStage));
 
@@ -93,9 +116,9 @@ public class SOSGameUI extends Application implements GameEndListener {
         HBox sizeSelectionLayout = new HBox(10, boardSizeLabel, boardSizeComboBox, startGameButton);
         sizeSelectionLayout.setAlignment(Pos.CENTER);
 
-        root.getChildren().addAll(titleLabel, sizeSelectionLayout, gameModeSelection, moveSelectionLayout, turnLabel, gameModeLabel, scoreDisplayLayout);
+        root.getChildren().addAll(titleLabel, sizeSelectionLayout, gameModeSelection, playerTypeSelection, moveSelectionLayout, turnLabel, gameModeLabel, scoreDisplayLayout);
 
-        Scene scene = new Scene(root, 500, 450);
+        Scene scene = new Scene(root, 500, 500);
         primaryStage.setScene(scene);
         primaryStage.setTitle("SOS Game");
         primaryStage.show();
@@ -188,7 +211,7 @@ public class SOSGameUI extends Application implements GameEndListener {
         }
 
         double requiredWidth = Math.max(500, boardSize * cellSize + 100);
-        double requiredHeight = Math.max(450, boardSize * cellSize + 450);
+        double requiredHeight = Math.max(500, boardSize * cellSize + 450);
 
         stage.setWidth(requiredWidth);
         stage.setHeight(requiredHeight);
@@ -199,6 +222,7 @@ public class SOSGameUI extends Application implements GameEndListener {
 
     /**
      * Handles the placement of a move on the board and updates the turn label.
+     * If it's the computer's turn, communicates with the LLMService to get a move.
      *
      * @param row the row where the move is placed
      * @param col the column where the move is placed
@@ -209,6 +233,7 @@ public class SOSGameUI extends Application implements GameEndListener {
             return;
         }
 
+        // Human player's move logic
         char move = sButton.isSelected() ? 'S' : 'O';
 
         if (game.isPlayerOneTurn()) {
@@ -221,18 +246,172 @@ public class SOSGameUI extends Application implements GameEndListener {
 
         if (moveSuccess) {
             button.setText(String.valueOf(move));
-
             if (!gameEnded && game.isBoardFull()) {
                 onGameEnd("The game is a draw. No SOS formed.");
             } else if (!gameEnded) {
-                if (game.isPlayerOneTurn()) {
-                    turnLabel.setText("Player 1's Turn (Place S)");
-                    turnLabel.setStyle("-fx-text-fill: red;");
-                } else {
-                    turnLabel.setText("Player 2's Turn (Place O)");
-                    turnLabel.setStyle("-fx-text-fill: blue;");
+                updateTurnLabel();
+
+                // Check if it's the AI's turn and process the AI move
+                if ((game.isPlayerOneTurn() && playerOneComputerCheckBox.isSelected()) ||
+                        (!game.isPlayerOneTurn() && playerTwoComputerCheckBox.isSelected())) {
+                    processAIMove(); // Handle the AI's move immediately
                 }
             }
+        }
+    }
+
+    private void processAIMove() {
+        boolean validMove = false;
+        int retryCount = 0;
+        final int maxRetries = 5; // Limit retries to avoid infinite loops
+
+        while (!validMove && retryCount < maxRetries) {
+            String prompt = generatePromptForLLM();
+            String llmResponse = llmService.getMoveFromLLM(prompt);
+
+            // Parse the structured response (e.g., "row,col,character")
+            String[] parts = llmResponse.split(",");
+            if (parts.length == 3) {
+                try {
+                    int aiRow = Integer.parseInt(parts[0].trim());
+                    int aiCol = Integer.parseInt(parts[1].trim());
+                    char aiMove = parts[2].trim().charAt(0);
+
+                    // Validate the move
+                    if (isValidAIMove(aiRow, aiCol, aiMove)) {
+                        placeComputerMove(aiRow, aiCol, aiMove);
+                        validMove = true; // Move was successful
+                    } else {
+                        System.err.println("AI attempted an invalid move at row=" + aiRow + ", col=" + aiCol);
+                        retryCount++;
+                    }
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid response format from LLM: " + llmResponse);
+                    retryCount++;
+                }
+            } else {
+                System.err.println("Invalid response format from LLM: " + llmResponse);
+                retryCount++;
+            }
+        }
+
+        if (!validMove) {
+            System.err.println("AI failed to make a valid move after " + maxRetries + " attempts.");
+            // Optionally, handle this case (e.g., force a pass or generate a random valid move)
+        }
+    }
+
+    /**
+     * Validates the AI's move to ensure it is within board bounds and the space is not occupied.
+     *
+     * @param row the row index of the move
+     * @param col the column index of the move
+     * @param move the character to place ('S' or 'O')
+     * @return true if the move is valid, false otherwise
+     */
+    private boolean isValidAIMove(int row, int col, char move) {
+        // Check if the move is within board bounds
+        if (row < 0 || row >= game.getBoard().length || col < 0 || col >= game.getBoard().length) {
+            return false;
+        }
+        // Check if the space is empty
+        if (game.getBoard()[row][col] != '\0') {
+            return false;
+        }
+        // Optionally, add additional checks if necessary (e.g., valid character check)
+        return move == 'S' || move == 'O'; // Assuming 'S' and 'O' are valid moves
+    }
+
+    /**
+     * Generates a prompt describing the current board state, player turn, etc.
+     * to send to the LLM.
+     *
+     * @return a string prompt for the LLM
+     */
+    private String generatePromptForLLM() {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are playing a game of SOS on a ")
+                .append(game.getBoard().length)
+                .append("x")
+                .append(game.getBoard().length)
+                .append(" board.\n");
+        prompt.append("The goal of the game is to form the sequence 'SOS' horizontally, vertically, or diagonally.\n");
+        prompt.append("You are Player ")
+                .append(game.isPlayerOneTurn() ? "1" : "2")
+                .append(". Your objective is to either create a new 'SOS' sequence or block the opponent from forming one.\n");
+        prompt.append("Remember that you cannot place your move on an already occupied space.\n");
+        prompt.append("The board uses 0-based indexing, meaning the top-left cell is (0,0) and the bottom-right cell is (")
+                .append(game.getBoard().length - 1)
+                .append(",")
+                .append(game.getBoard().length - 1)
+                .append(").\n");
+        prompt.append("Here is the current board state:\n");
+
+        char[][] board = game.getBoard();
+        for (int r = 0; r < board.length; r++) {
+            for (int c = 0; c < board[r].length; c++) {
+                if (board[r][c] == '\0') {
+                    prompt.append(". "); // Empty space
+                } else {
+                    prompt.append(board[r][c]).append("(").append(getPlayerLabel(r, c)).append(") ");
+                }
+            }
+            prompt.append("\n");
+        }
+
+        prompt.append("Occupied spaces (row,col): ");
+        for (int r = 0; r < board.length; r++) {
+            for (int c = 0; c < board[r].length; c++) {
+                if (board[r][c] != '\0') {
+                    prompt.append("(").append(r).append(",").append(c).append(") ");
+                }
+            }
+        }
+        prompt.append("\nConsider possible 'S' and 'O' placements that you can make with the goal of forming an 'SOS' on your turn. Provide your move in the format 'row,col,character' (e.g., '1,2,S'). The row and column values start counting from 0.");
+        return prompt.toString();
+    }
+
+    private String getPlayerLabel(int row, int col) {
+        // Check the playerMoves array to determine which player made the move
+        String[][] playerMoves = game.getPlayerMoves();
+        if (playerMoves[row][col] != null) {
+            return playerMoves[row][col]; // Return "P1" or "P2" based on who placed the move
+        }
+        return ""; // Default case (shouldn't happen for occupied spaces)
+    }
+
+    /**
+     * Places a move for the computer player based on the response from the LLM.
+     *
+     * @param row the row where the move is placed
+     * @param col the column where the move is placed
+     * @param move the character to place ('S' or 'O')
+     */
+    private void placeComputerMove(int row, int col, char move) {
+        if (row >= 0 && row < game.getBoard().length && col >= 0 && col < game.getBoard().length) {
+            Button button = (Button) grid.getChildren().get(row * game.getBoard().length + col);
+            if (game.placeMove(row, col, move)) {
+                button.setText(String.valueOf(move));
+                button.setStyle(game.isPlayerOneTurn() ? "-fx-text-fill: red; -fx-font-weight: bold;" : "-fx-text-fill: blue; -fx-font-weight: bold;");
+                updateTurnLabel(); // Ensure turn label is updated after AI move
+            } else {
+                System.err.println("Failed to place AI move on the board.");
+            }
+        } else {
+            System.err.println("AI move is out of board bounds: row=" + row + ", col=" + col);
+        }
+    }
+
+    /**
+     * Updates the turn label based on the current player.
+     */
+    private void updateTurnLabel() {
+        if (game.isPlayerOneTurn()) {
+            turnLabel.setText("Player 1's Turn (Place S)");
+            turnLabel.setStyle("-fx-text-fill: red;");
+        } else {
+            turnLabel.setText("Player 2's Turn (Place O)");
+            turnLabel.setStyle("-fx-text-fill: blue;");
         }
     }
 

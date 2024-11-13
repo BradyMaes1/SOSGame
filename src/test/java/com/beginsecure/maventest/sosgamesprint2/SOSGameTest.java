@@ -14,6 +14,7 @@ public class SOSGameTest {
     private GeneralGame generalGame;
     private String gameMode;
     private TestGameEndListener testListener;
+    private LLMService mockLlmService;
 
     /**
      * Sets up the test environment before each test.
@@ -24,7 +25,109 @@ public class SOSGameTest {
         testListener = new TestGameEndListener();
         simpleGame = new SimpleGame(3, testListener);
         generalGame = new GeneralGame(3, testListener);
+        mockLlmService = new MockLLMService(); // Mock service for simulating AI moves
     }
+
+    private static class MockLLMService extends LLMService {
+        @Override
+        public String getMoveFromLLM(String prompt) {
+            // Mock response for AI moves (simple hardcoded moves for testing)
+            // This can be expanded with more complex logic for different board states
+            return "1,1,S"; // Example move
+        }
+    }
+
+    @Test
+    void testComputerOpponentMoveAsPlayer1() {
+        // Simulate enabling Player 1 as a computer opponent
+        boolean isPlayer1Computer = true;
+        boolean isPlayer2Computer = false;
+
+        // Generate a move for the AI (Player 1)
+        if (isPlayer1Computer) {
+            String prompt = generatePromptForAI(simpleGame, true);
+            String aiMove = mockLlmService.getMoveFromLLM(prompt);
+
+            // Validate and place the AI's move
+            String[] moveParts = aiMove.split(",");
+            int row = Integer.parseInt(moveParts[0].trim());
+            int col = Integer.parseInt(moveParts[1].trim());
+            char move = moveParts[2].trim().charAt(0);
+            boolean moveSuccess = simpleGame.placeMove(row, col, move);
+
+            assertTrue(moveSuccess, "AI's move as Player 1 should be valid.");
+            assertEquals(move, simpleGame.getBoard()[row][col], "AI's move should be correctly placed on the board.");
+        }
+    }
+
+    @Test
+    void testComputerOpponentMoveAsPlayer2() {
+        // Simulate a move by Player 1
+        simpleGame.placeMove(0, 0, 'S');
+
+        // Simulate enabling Player 2 as a computer opponent
+        boolean isPlayer2Computer = true;
+
+        // Generate a move for the AI (Player 2)
+        if (isPlayer2Computer) {
+            String prompt = generatePromptForAI(simpleGame, false);
+            String aiMove = mockLlmService.getMoveFromLLM(prompt);
+
+            // Validate and place the AI's move
+            String[] moveParts = aiMove.split(",");
+            int row = Integer.parseInt(moveParts[0].trim());
+            int col = Integer.parseInt(moveParts[1].trim());
+            char move = moveParts[2].trim().charAt(0);
+            boolean moveSuccess = simpleGame.placeMove(row, col, move);
+
+            assertTrue(moveSuccess, "AI's move as Player 2 should be valid.");
+            assertEquals(move, simpleGame.getBoard()[row][col], "AI's move should be correctly placed on the board.");
+        }
+    }
+
+    @Test
+    void testBothPlayersAsComputerOpponents() {
+        boolean isPlayer1Computer = true;
+        boolean isPlayer2Computer = true;
+
+        for (int i = 0; i < 9; i++) { // Loop to simulate moves for a 3x3 board
+            boolean isPlayerOneTurn = simpleGame.isPlayerOneTurn();
+            if ((isPlayerOneTurn && isPlayer1Computer) || (!isPlayerOneTurn && isPlayer2Computer)) {
+                String prompt = generatePromptForAI(simpleGame, isPlayerOneTurn);
+                String aiMove = mockLlmService.getMoveFromLLM(prompt);
+
+                // Validate and place the AI's move
+                String[] moveParts = aiMove.split(",");
+                int row = Integer.parseInt(moveParts[0].trim());
+                int col = Integer.parseInt(moveParts[1].trim());
+                char move = moveParts[2].trim().charAt(0);
+                boolean moveSuccess = simpleGame.placeMove(row, col, move);
+
+                assertTrue(moveSuccess, "AI's move should be valid.");
+                assertEquals(move, simpleGame.getBoard()[row][col], "AI's move should be correctly placed on the board.");
+            }
+
+            // Check if game ends
+            if (simpleGame.isBoardFull() || testListener.endMessage != null) {
+                break;
+            }
+        }
+
+        assertTrue(simpleGame.isBoardFull() || testListener.endMessage != null, "The game should end with either a winner or a draw.");
+    }
+
+    /**
+     * Generates a prompt for the AI based on the current game state.
+     *
+     * @param game the current game instance
+     * @param isPlayerOneTurn whether it is Player 1's turn
+     * @return a prompt string for the AI
+     */
+    private String generatePromptForAI(SOSGame game, boolean isPlayerOneTurn) {
+        // Simplified prompt generation for testing
+        return "Current board state: " + (isPlayerOneTurn ? "Player 1's turn." : "Player 2's turn.");
+    }
+
 
     // Original Tests
 

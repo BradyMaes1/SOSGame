@@ -11,6 +11,7 @@ public class SOSGame {
 
     private Set<String> detectedSOS;
     private char[][] board;  // The game board
+    private String[][] playerMoves; // Tracks which player placed each move
     private int boardSize;   // Size of the board
     protected boolean isPlayerOneTurn = true;  // Track player turns
 
@@ -22,6 +23,7 @@ public class SOSGame {
     public SOSGame(int boardSize) {
         this.boardSize = boardSize;
         this.board = new char[boardSize][boardSize];
+        this.playerMoves = new String[boardSize][boardSize]; // Initialize playerMoves array
         this.detectedSOS = new HashSet<>();
     }
 
@@ -36,6 +38,7 @@ public class SOSGame {
     public boolean placeMove(int row, int col, char character) {
         if (isValidMove(row, col) && (character == 'S' || character == 'O')) {
             board[row][col] = character;
+            playerMoves[row][col] = isPlayerOneTurn ? "P1" : "P2"; // Track the player who made the move
             switchTurn();
             return true;
         }
@@ -167,6 +170,7 @@ public class SOSGame {
      */
     protected void switchTurn() {
         isPlayerOneTurn = !isPlayerOneTurn;
+        //System.out.println("Turn switched. Now it's " + (isPlayerOneTurn ? "Player 1's" : "Player 2's") + " turn.");
     }
 
     /**
@@ -185,5 +189,14 @@ public class SOSGame {
      */
     public char[][] getBoard() {
         return board;
+    }
+
+    /**
+     * Retrieves the player move tracker.
+     *
+     * @return the playerMoves array
+     */
+    public String[][] getPlayerMoves() {
+        return playerMoves;
     }
 }
