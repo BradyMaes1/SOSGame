@@ -5,6 +5,7 @@ package com.beginsecure.maventest.sosgamesprint2;
  * If the board is filled with no SOS formed, the game ends in a draw.
  */
 public class SimpleGame extends SOSGame {
+
     private final GameEndListener gameEndListener;
 
     /**
@@ -31,21 +32,18 @@ public class SimpleGame extends SOSGame {
     @Override
     public boolean placeMove(int row, int col, char character) {
         boolean moveSuccess = super.placeMove(row, col, character);
+
         if (moveSuccess) {
             int sosCount = checkForSOSCount(row, col);
-            if (sosCount > 0) {
-                // Assign the winner based on the current player's turn before switching
-                winner = isPlayerOneTurn ? "Player 1" : "Player 2";
-                String winnerMessage = winner + " wins by forming an SOS!";
-                gameEndListener.onGameEnd(winnerMessage);
-                return true; // End the game once an SOS is formed
-            }
 
-            if (isBoardFull()) {
-                winner = "Draw";
+            if (sosCount > 0) {
+                String winnerMessage = "Player " + (isPlayerOneTurn() ? "2" : "1") + " wins by forming an SOS!";
+                gameEndListener.onGameEnd(winnerMessage);
+            } else if (isBoardFull()) {
                 gameEndListener.onGameEnd("The game is a draw. No SOS formed.");
             }
         }
+
         return moveSuccess;
     }
 }
